@@ -26,13 +26,58 @@ param(
 # ============================================================================
 $ErrorActionPreference = "Continue"
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-$logDir = "$env:USERPROFILE\Documents\WindowsFixer"
+
+# Detect OneDrive Documents folder (falls back to local Documents if OneDrive not found)
+$documentsPath = if (Test-Path "$env:USERPROFILE\OneDrive\Documents") {
+    "$env:USERPROFILE\OneDrive\Documents"
+} else {
+    [Environment]::GetFolderPath("MyDocuments")
+}
+
+$logDir = "$documentsPath\WindowsFixer"
 $logFile = "$logDir\WindowsFixer_Log_$timestamp.txt"
 $htmlReport = "$logDir\WindowsFixer_Report_$timestamp.html"
 $registryBackupDir = "$logDir\RegistryBackup_$timestamp"
 
 # Create log directory
 if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+
+# ============================================================================
+# AUTOMATIC CLEANUP OF OLD FILES
+# ============================================================================
+function Remove-OldReports {
+    param(
+        [string]$Path,
+        [int]$DaysToKeep = 7
+    )
+    
+    if (Test-Path $Path) {
+        $cutoffDate = (Get-Date).AddDays(-$DaysToKeep)
+        $removedCount = 0
+        
+        # Clean old log files
+        Get-ChildItem -Path $Path -Filter "WindowsFixer_Log_*.txt" -ErrorAction SilentlyContinue | 
+            Where-Object { $_.LastWriteTime -lt $cutoffDate } | 
+            ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue; $removedCount++ }
+        
+        # Clean old HTML reports
+        Get-ChildItem -Path $Path -Filter "WindowsFixer_Report_*.html" -ErrorAction SilentlyContinue | 
+            Where-Object { $_.LastWriteTime -lt $cutoffDate } | 
+            ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue; $removedCount++ }
+        
+        # Clean old registry backups (these are large!)
+        Get-ChildItem -Path $Path -Filter "RegistryBackup_*" -Directory -ErrorAction SilentlyContinue | 
+            Where-Object { $_.LastWriteTime -lt $cutoffDate } | 
+            ForEach-Object { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue; $removedCount++ }
+        
+        if ($removedCount -gt 0) {
+            Write-Host "[Cleanup] Removed $removedCount old file(s) older than $DaysToKeep days" -ForegroundColor DarkGray
+        }
+    }
+}
+
+# Run cleanup (keeps last 7 days)
+Remove-OldReports -Path $logDir -DaysToKeep 7
 
 Start-Transcript -Path $logFile -Append | Out-Null
 
@@ -252,12 +297,23 @@ if ($IncludeRegistryFixes) {
         $wuServices = @("wuauserv", "cryptSvc", "bits", "msiserver")
         try {
             foreach ($service in $wuServices) { Stop-Service -Name $service -Force -ErrorAction SilentlyContinue }
+            
+            # Remove old backups if they exist
+            if (Test-Path "$env:SystemRoot\SoftwareDistribution.old") {
+                Remove-Item -Path "$env:SystemRoot\SoftwareDistribution.old" -Recurse -Force -ErrorAction SilentlyContinue
+            }
+            if (Test-Path "$env:SystemRoot\System32\catroot2.old") {
+                Remove-Item -Path "$env:SystemRoot\System32\catroot2.old" -Recurse -Force -ErrorAction SilentlyContinue
+            }
+            
+            # Now rename the current folders
             if (Test-Path "$env:SystemRoot\SoftwareDistribution") {
                 Rename-Item -Path "$env:SystemRoot\SoftwareDistribution" -NewName "SoftwareDistribution.old" -Force -ErrorAction Stop
             }
             if (Test-Path "$env:SystemRoot\System32\catroot2") {
                 Rename-Item -Path "$env:SystemRoot\System32\catroot2" -NewName "catroot2.old" -Force -ErrorAction Stop
             }
+            
             foreach ($service in $wuServices) { Start-Service -Name $service -ErrorAction SilentlyContinue }
             Write-Status "Windows Update components reset" "Success"
             $registryResults.WindowsUpdate = "Reset successful"
