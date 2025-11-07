@@ -1,17 +1,20 @@
 <#
 .SYNOPSIS
-    Comprehensive Windows System Health & Repair Utility
+    Windows Fixer - Comprehensive System Health & Repair Utility
 .DESCRIPTION
-    Automates SFC, DISM, disk checks, memory diagnostics, and SAFE registry repairs.
-    Run with Administrator privileges.
+    One-click automation for SFC, DISM, disk checks, memory diagnostics, and safe registry repairs.
+    Generates a detailed, stylish HTML report. Run with Administrator privileges.
 .PARAMETER AutoMemoryTest
     Automatically schedule memory test and reboot after completion
 .PARAMETER IncludeRegistryFixes
-    Include safe registry repairs (creates restore point & backups first)
+    Include safe, reversible registry repairs (creates restore point & backups first)
 .EXAMPLE
-    .\Repair-WindowsSystem.ps1
-    .\Repair-WindowsSystem.ps1 -IncludeRegistryFixes
-    .\Repair-WindowsSystem.ps1 -IncludeRegistryFixes -AutoMemoryTest:$true
+    .\WindowsFixer.ps1
+    .\WindowsFixer.ps1 -IncludeRegistryFixes
+    .\WindowsFixer.ps1 -IncludeRegistryFixes -AutoMemoryTest:$true
+.NOTES
+    GitHub: https://github.com/pranjalchaubey
+    Created by Pranjal Chaubey
 #>
 param(
     [switch]$AutoMemoryTest = $false,
@@ -23,9 +26,9 @@ param(
 # ============================================================================
 $ErrorActionPreference = "Continue"
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-$logDir = "$env:USERPROFILE\Documents\WindowsSystemHealth"
-$logFile = "$logDir\RepairLog_$timestamp.txt"
-$htmlReport = "$logDir\HealthReport_$timestamp.html"
+$logDir = "$env:USERPROFILE\Documents\WindowsFixer"
+$logFile = "$logDir\WindowsFixer_Log_$timestamp.txt"
+$htmlReport = "$logDir\WindowsFixer_Report_$timestamp.html"
 $registryBackupDir = "$logDir\RegistryBackup_$timestamp"
 
 # Create log directory
@@ -49,7 +52,7 @@ if (!(Test-IsAdmin)) {
 }
 
 Write-Host "`n==============================================" -ForegroundColor Cyan
-Write-Host "  WINDOWS SYSTEM HEALTH & REPAIR UTILITY" -ForegroundColor Cyan
+Write-Host "  WINDOWS FIXER - SYSTEM REPAIR UTILITY" -ForegroundColor Cyan
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host "Started: $timestamp" -ForegroundColor Gray
 Write-Host "Report will be saved to: $htmlReport`n" -ForegroundColor Gray
@@ -200,7 +203,7 @@ if ($IncludeRegistryFixes) {
     # Create System Restore Point
     try {
         Write-Status "Creating system restore point..." "Registry"
-        Checkpoint-Computer -Description "Windows Health Utility - Registry Fixes" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
+        Checkpoint-Computer -Description "Windows Fixer - Registry Repairs" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
         Write-Status "Restore point created successfully" "Success"
     } catch {
         Write-Status "Could not create restore point: $($_.Exception.Message)" "Warning"
@@ -224,7 +227,7 @@ if ($IncludeRegistryFixes) {
     if ($IncludeRegistryFixes) {
         $registryResults = @{}
         
-        # 8A. WMI Repository Reset (fixes mysterious WMI corruption)
+        # WMI Repository Reset
         Write-Status "Checking WMI health..." "Registry"
         try {
             Get-CimInstance -ClassName Win32_Process -First 1 | Out-Null
@@ -244,26 +247,18 @@ if ($IncludeRegistryFixes) {
             }
         }
         
-        # 8B. Windows Update Components Reset
+        # Windows Update Components Reset
         Write-Status "Resetting Windows Update components..." "Registry"
         $wuServices = @("wuauserv", "cryptSvc", "bits", "msiserver")
         try {
-            foreach ($service in $wuServices) {
-                Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
-            }
-            
-            # Rename folders (registry-independent but critical for WU health)
+            foreach ($service in $wuServices) { Stop-Service -Name $service -Force -ErrorAction SilentlyContinue }
             if (Test-Path "$env:SystemRoot\SoftwareDistribution") {
                 Rename-Item -Path "$env:SystemRoot\SoftwareDistribution" -NewName "SoftwareDistribution.old" -Force -ErrorAction Stop
             }
             if (Test-Path "$env:SystemRoot\System32\catroot2") {
                 Rename-Item -Path "$env:SystemRoot\System32\catroot2" -NewName "catroot2.old" -Force -ErrorAction Stop
             }
-            
-            foreach ($service in $wuServices) {
-                Start-Service -Name $service -ErrorAction SilentlyContinue
-            }
-            
+            foreach ($service in $wuServices) { Start-Service -Name $service -ErrorAction SilentlyContinue }
             Write-Status "Windows Update components reset" "Success"
             $registryResults.WindowsUpdate = "Reset successful"
         } catch {
@@ -271,31 +266,26 @@ if ($IncludeRegistryFixes) {
             $registryResults.WindowsUpdate = "Failed - $($_.Exception.Message)"
         }
         
-        # 8C. Winsock and TCP/IP Stack Reset (fixes network wonkiness)
+        # Winsock/TCP-IP Stack Reset
         Write-Status "Resetting Winsock and TCP/IP stack..." "Registry"
         try {
             netsh winsock reset | Out-Null
             netsh int ip reset | Out-Null
             ipconfig /flushdns | Out-Null
-            Write-Status "Network stack reset complete (reboot required to fully apply)" "Success"
+            Write-Status "Network stack reset complete (reboot required)" "Success"
             $registryResults.NetworkStack = "Reset successful - Reboot needed"
         } catch {
             Write-Status "Network stack reset failed: $($_.Exception.Message)" "Error"
             $registryResults.NetworkStack = "Failed - $($_.Exception.Message)"
         }
         
-        # 8D. Font Cache Rebuild (fixes UI glitches, missing icons)
+        # Font Cache Rebuild
         Write-Status "Rebuilding font cache..." "Registry"
         try {
             Stop-Service -Name "FontCache" -Force -ErrorAction SilentlyContinue
-            $fontCachePaths = @(
-                "$env:LocalAppData\Microsoft\Windows\Fonts",
-                "$env:SystemRoot\System32\FNTCACHE.DAT"
-            )
+            $fontCachePaths = @("$env:LocalAppData\Microsoft\Windows\Fonts", "$env:SystemRoot\System32\FNTCACHE.DAT")
             foreach ($path in $fontCachePaths) {
-                if (Test-Path $path) {
-                    Remove-Item -Path $path -Force -Recurse -ErrorAction SilentlyContinue
-                }
+                if (Test-Path $path) { Remove-Item -Path $path -Force -Recurse -ErrorAction SilentlyContinue }
             }
             Start-Service -Name "FontCache" -ErrorAction SilentlyContinue
             Write-Status "Font cache rebuilt" "Success"
@@ -305,11 +295,10 @@ if ($IncludeRegistryFixes) {
             $registryResults.FontCache = "Partially failed - $($_.Exception.Message)"
         }
         
-        # 8E. Registry Health Scan (READ-ONLY - detects but doesn't fix automatically)
+        # Registry Health Scan (READ-ONLY)
         Write-Status "Scanning registry for common issues..." "Registry"
         $readonlyScan = @{}
         
-        # Check for orphaned uninstall entries
         $uninstallPaths = @(
             "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
             "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
@@ -321,7 +310,6 @@ if ($IncludeRegistryFixes) {
         }
         $readonlyScan.OrphanedUninstallEntries = $orphanedApps
         
-        # Check startup programs
         $startupPaths = @(
             "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
             "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
@@ -335,7 +323,7 @@ if ($IncludeRegistryFixes) {
         }
         $readonlyScan.StartupPrograms = $startupItems
         
-        Write-Status "Registry scan found $($orphanedApps.Count) orphaned entries and $($startupItems.Count) startup items" "Info"
+        Write-Status "Found $($orphanedApps.Count) orphaned entries and $($startupItems.Count) startup items" "Info"
         $registryResults.ReadOnlyScan = $readonlyScan
     }
 }
@@ -357,7 +345,7 @@ $systemInfo = @{
 $registryHtml = if ($IncludeRegistryFixes -and $registryResults) {
     @"
         <h2>8. Registry Repair Operations</h2>
-        <div class="section">
+        <div class="section registry-section">
             <p><strong>Restore Point:</strong> Created before operations</p>
             <p><strong>Registry Backups:</strong> $registryBackupDir</p>
             <table>
@@ -394,7 +382,7 @@ $registryHtml = if ($IncludeRegistryFixes -and $registryResults) {
             }else{
                 "<p>✅ No startup items detected</p>"
             })
-            <p style="background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107;">
+            <p class="tip">
                 <strong>💡 Tip:</strong> Review these entries manually. Only delete if you're certain they're unwanted.
             </p>
         </div>
@@ -403,33 +391,186 @@ $registryHtml = if ($IncludeRegistryFixes -and $registryResults) {
     "<h2>8. Registry Repair Operations</h2><div class='section'><p>⚠️ Not performed (use -IncludeRegistryFixes to enable)</p></div>"
 }
 
-$reportData = @"
+# Final HTML Report Generation
+$reportHtml = @"
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Windows System Health Report</title>
+    <title>Windows Fixer Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #0078d4; border-bottom: 3px solid #0078d4; padding-bottom: 10px; }
-        h2 { color: #333; margin-top: 30px; }
-        h3 { color: #555; margin-top: 20px; }
-        .section { margin: 20px 0; padding: 15px; border-left: 4px solid #0078d4; background: #f9f9f9; }
-        .success { border-left-color: #0f0; background: #e8f5e9; }
-        .warning { border-left-color: #ff9800; background: #fff3e0; }
-        .error { border-left-color: #f44336; background: #ffebee; }
-        pre { background: #263238; color: #aed581; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #0078d4; color: white; }
-        .summary { font-size: 1.1em; padding: 15px; background: #e3f2fd; border-radius: 4px; }
-        .tip { background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 10px 0; }
-        .registry-section { border-left: 4px solid #8e24aa; background: #f3e5f5; }
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --border-color: #30363d;
+            --text-color: #c9d1d9;
+            --text-bright: #f0f6fc;
+            --accent-glow: #00cfff;
+            --success-glow: #00f0b0;
+            --warning-glow: #ffdd00;
+            --error-glow: #ff3366;
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: #484f58; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #58a6ff; }
+
+        .container {
+            max-width: 1100px;
+            margin: 20px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--font-body);
+            color: var(--text-bright);
+            letter-spacing: -0.5px;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-weight: 700;
+        }
+
+        h2 {
+            font-size: 1.75em;
+            margin-top: 50px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            font-weight: 600;
+        }
+
+        h3 {
+            font-size: 1.25em;
+            margin-top: 25px;
+            color: var(--text-bright);
+            font-weight: 600;
+        }
+
+        p { margin-bottom: 15px; font-size: 1em; }
+
+        .summary {
+            font-size: 1.1em;
+            padding: 25px;
+            background: rgba(0, 207, 255, 0.05);
+            border: 1px solid var(--accent-glow);
+            border-radius: 12px;
+        }
+        .summary h3 {
+            margin-top: 0;
+            color: var(--accent-glow);
+        }
+        .summary ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        .summary li {
+            padding: 5px 0;
+            position: relative;
+            font-size: 1.05em;
+        }
+
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border-left-width: 4px;
+        }
+        
+        .section.success { border-left-color: var(--success-glow); }
+        .section.warning { border-left-color: var(--warning-glow); }
+        .section.error { border-left-color: var(--error-glow); }
+        .registry-section { border-left-color: #8e24aa; }
+
+        pre {
+            background: #010409;
+            color: var(--success-glow);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: var(--font-mono);
+            font-size: 0.95em;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 20px 0;
+            font-size: 0.95em;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th {
+            background-color: rgba(255, 255, 255, 0.03);
+            color: var(--accent-glow);
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+        tr { background-color: var(--card-bg); }
+        tbody tr:hover { background-color: rgba(255, 255, 255, 0.02); }
+        tr:last-child td { border-bottom: none; }
+
+        .tip {
+            background: rgba(255, 221, 0, 0.05);
+            padding: 12px 18px;
+            border: 1px solid var(--warning-glow);
+            border-radius: 8px;
+            color: var(--warning-glow);
+        }
+        
+        .footer-text {
+            margin-top: 40px;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔧 Windows System Health Report</h1>
+        <h1>🔧 Windows Fixer Report</h1>
         <p><strong>Generated:</strong> $reportDate</p>
         <p><strong>System:</strong> $($systemInfo.OS) | Build: $($systemInfo.Build) | Uptime: $($systemInfo.Uptime)</p>
         
@@ -472,10 +613,14 @@ $reportData = @"
             $(if($results.SMART){
             "<h3>SMART Details:</h3>
             <table>
-                <tr><th>Disk Model</th><th>Predict Failure</th><th>Reason</th></tr>
-                $(foreach(`$disk in `$results.SMART){
-                    `"<tr><td>`$(`$disk.Model)</td><td>`$(`$disk.PredictFailure)</td><td>`$(`$disk.Reason)</td></tr>`"
-                })
+                <thead>
+                    <tr><th>Disk Model</th><th>Predict Failure</th><th>Reason</th></tr>
+                </thead>
+                <tbody>
+                $($results.SMART | ForEach-Object {
+                    "<tr><td>$($_.Model)</td><td>$($_.PredictFailure)</td><td>$($_.Reason)</td></tr>"
+                } | Out-String)
+                </tbody>
             </table>"
             })
         </div>
@@ -485,10 +630,14 @@ $reportData = @"
             <p>Total Critical Events: $($results.EventLog.Count)</p>
             $(if($results.EventLog.Count -gt 0){
             "<table>
-                <tr><th>Time</th><th>Source</th><th>Message</th></tr>
-                $(foreach(`$evt in `$results.EventLog.Events){
-                    `"<tr><td>`$(`$evt.TimeGenerated)</td><td>`$(`$evt.Source)</td><td>`$(`$evt.Message)</td></tr>`"
-                })
+                <thead>
+                    <tr><th>Time</th><th>Source</th><th>Message</th></tr>
+                </thead>
+                <tbody>
+                $($results.EventLog.Events | ForEach-Object {
+                    "<tr><td>$($_.TimeGenerated)</td><td>$($_.Source)</td><td>$($_.Message)</td></tr>"
+                } | Out-String)
+                </tbody>
             </table>"
             })
         </div>
@@ -501,16 +650,17 @@ $reportData = @"
 
         $registryHtml
 
-        <p style="margin-top: 40px; text-align: center; color: #666;">
+        <p class="footer-text">
             Log file: $logFile<br>
-            <em>Report generated by Windows System Health Utility</em>
+            <em>Windows Fixer v1.0</em><br>
+            Created by <a href="https://github.com/pranjalchaubey" target="_blank" style="color: var(--accent-glow); text-decoration: none;">Pranjal Chaubey</a>
         </p>
     </div>
 </body>
 </html>
 "@
 
-$reportData | Out-File -FilePath $htmlReport -Encoding utf8
+$reportHtml | Out-File -FilePath $htmlReport -Encoding utf8
 Write-Status "Report saved to: $htmlReport" "Success"
 
 # ============================================================================
@@ -530,19 +680,18 @@ if ($AutoMemoryTest) {
     Write-Host "Report has been saved to: $htmlReport" -ForegroundColor Cyan
     Start-Process mdsched.exe
     
-    # Create desktop shortcut for memory test
-    $shortcutPath = "$env:USERPROFILE\Desktop\Run Memory Test.lnk"
+    $shortcutPath = "$env:USERPROFILE\Desktop\Windows Fixer - Memory Test.lnk"
     if (!(Test-Path $shortcutPath)) {
         $WScriptShell = New-Object -ComObject WScript.Shell
         $shortcut = $WScriptShell.CreateShortcut($shortcutPath)
         $shortcut.TargetPath = "$env:SystemRoot\System32\mdsched.exe"
         $shortcut.Save()
-        Write-Status "Created desktop shortcut: 'Run Memory Test'" "Success"
+        Write-Status "Created desktop shortcut: 'Windows Fixer - Memory Test'" "Success"
     }
 }
 
 Stop-Transcript | Out-Null
 Start-Process $htmlReport
-Write-Status "All operations complete! Review the report for details." "Success"
+Write-Status "Windows Fixer completed successfully!" "Success"
 Write-Host "Press any key to exit..." -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
