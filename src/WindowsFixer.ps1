@@ -65,15 +65,15 @@ function Write-Status {
     Write-Host "[$Type] $Message" -ForegroundColor $color
 }
 
-function Run-Command {
+function Start-CommandWithTimeout {
     param(
         [string]$Command,
         [string]$Arguments,
         [int]$TimeoutMinutes = 60
     )
     $job = Start-Job -ScriptBlock {
-        param($cmd, $args)
-        & $cmd $args.Split(' ') 2>&1
+        param($cmd, $cmdArgs)
+        & $cmd $cmdArgs.Split(' ') 2>&1
     } -ArgumentList $Command, $Arguments
     
     $result = Wait-Job $job -Timeout ($TimeoutMinutes * 60) | Receive-Job
@@ -108,7 +108,7 @@ Write-Status "Free space on C:\: $freeSpaceGB GB" $(if($freeSpaceGB -lt 10){"War
 # ============================================================================
 Write-Status "Running SFC Scan (First Pass)..." "Task"
 Write-Host "This may take 15-30 minutes..." -ForegroundColor Gray
-$sfcResult = Run-Command -Command "sfc.exe" -Arguments "/scannow"
+$sfcResult = Start-CommandWithTimeout -Command "sfc.exe" -Arguments "/scannow"
 $results.SFCFirstPass = @{
     Completed = $sfcResult -join "`n"
     IssuesFound = $sfcResult -match "corrupt|could not|errors"
@@ -120,7 +120,7 @@ Write-Status "SFC First Pass Complete" $(if($results.SFCFirstPass.IssuesFound){"
 # ============================================================================
 Write-Status "Running DISM Image Restore..." "Task"
 Write-Host "This may take 20-40 minutes. Internet connection recommended..." -ForegroundColor Gray
-$dismResult = Run-Command -Command "dism.exe" -Arguments "/Online /Cleanup-Image /RestoreHealth" -TimeoutMinutes 45
+$dismResult = Start-CommandWithTimeout -Command "dism.exe" -Arguments "/Online /Cleanup-Image /RestoreHealth" -TimeoutMinutes 45
 $results.DISM = @{
     Completed = $dismResult -join "`n"
     IssuesFound = $dismResult -match "Error|failed|corruption"
@@ -132,7 +132,7 @@ Write-Status "DISM Restore Complete" $(if($results.DISM.Success){"Success"}else{
 # STEP 4: SYSTEM FILE CHECKER (SECOND PASS)
 # ============================================================================
 Write-Status "Running SFC Scan (Second Pass)..." "Task"
-$sfcResult2 = Run-Command -Command "sfc.exe" -Arguments "/scannow"
+$sfcResult2 = Start-CommandWithTimeout -Command "sfc.exe" -Arguments "/scannow"
 $results.SFCSecondPass = @{
     Completed = $sfcResult2 -join "`n"
     IssuesFound = $sfcResult2 -match "corrupt|could not|errors"
@@ -280,28 +280,28 @@ $reportData = @"
         <div class="section">
             <h3>WMIC Status:</h3>
             <pre>$($results.WMICDisk)</pre>
-            $(if($results.SMART)){
-            <h3>SMART Details:</h3>
+            $(if($results.SMART){
+            "<h3>SMART Details:</h3>
             <table>
                 <tr><th>Disk Model</th><th>Predict Failure</th><th>Reason</th></tr>
                 $(foreach($disk in $results.SMART){
-                    "<tr><td>$($disk.Model)</td><td>$($disk.PredictFailure)</td><td>$($disk.Reason)</td></tr>"
+                    `"<tr><td>$($disk.Model)</td><td>$($disk.PredictFailure)</td><td>$($disk.Reason)</td></tr>`"
                 })
-            </table>
-            }
+            </table>"
+            })
         </div>
 
         <h2>5. Recent Critical Events (Last 7 Days)</h2>
         <div class="section $(if($results.EventLog.Count -gt 10){'warning'}else{'success'})">
             <p>Total Critical Events: $($results.EventLog.Count)</p>
-            $(if($results.EventLog.Count -gt 0)){
-            <table>
+            $(if($results.EventLog.Count -gt 0){
+            "<table>
                 <tr><th>Time</th><th>Source</th><th>Message</th></tr>
-                $(foreach($event in $results.EventLog.Events){
-                    "<tr><td>$($event.TimeGenerated)</td><td>$($event.Source)</td><td>$($event.Message)</td></tr>"
+                $(foreach($evt in $results.EventLog.Events){
+                    `"<tr><td>$($evt.TimeGenerated)</td><td>$($evt.Source)</td><td>$($evt.Message)</td></tr>`"
                 })
-            </table>
-            }
+            </table>"
+            })
         </div>
 
         <h2>6. Cleanup Summary</h2>
