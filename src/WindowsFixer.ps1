@@ -94,9 +94,9 @@ $results = @{}
 Write-Status "Performing pre-flight checks..." "Task"
 $preflight = @{}
 
-$pendingReboot = Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending" -or
-                 Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired" -or
-                 (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "PendingFileRenameOperations" -ErrorAction SilentlyContinue)
+$pendingReboot = (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending") -or `
+                 (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired") -or `
+                 ($null -ne (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "PendingFileRenameOperations" -ErrorAction SilentlyContinue))
 $preflight.PendingReboot = $pendingReboot
 
 $disk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='C:'"
@@ -230,7 +230,7 @@ if ($IncludeRegistryFixes) {
         # WMI Repository Reset
         Write-Status "Checking WMI health..." "Registry"
         try {
-            Get-CimInstance -ClassName Win32_Process -First 1 | Out-Null
+            Get-CimInstance -ClassName Win32_Process | Select-Object -First 1 | Out-Null
             Write-Status "WMI repository is healthy" "Success"
             $registryResults.WMI = "Healthy - No action taken"
         } catch {
@@ -334,11 +334,13 @@ if ($IncludeRegistryFixes) {
 Write-Status "Generating detailed health report..." "Task"
 
 $reportDate = Get-Date -Format "dd MMM yyyy HH:mm:ss"
+$os = Get-CimInstance -ClassName Win32_OperatingSystem
+$uptime = (Get-Date) - $os.LastBootUpTime
 $systemInfo = @{
-    OS = (Get-CimInstance -ClassName Win32_OperatingSystem).Caption
+    OS = $os.Caption
     Build = [System.Environment]::OSVersion.Version.ToString()
-    Uptime = (Get-Uptime).ToString("d\d\ h\h\ m\m")
-    LastBoot = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime
+    Uptime = "{0}d {1}h {2}m" -f $uptime.Days, $uptime.Hours, $uptime.Minutes
+    LastBoot = $os.LastBootUpTime
 }
 
 # Convert registry results to HTML sections
