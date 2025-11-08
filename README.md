@@ -171,6 +171,8 @@ Enter your choice (1-7):
 
 ## Understanding Your Report
 
+![FULL SAMPLE REPORT](assets/sample-report-full-screenshot.png) 
+
 After running Windows Fixer, you'll see an HTML report with comprehensive results:
 
 ### Executive Summary
