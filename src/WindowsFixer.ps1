@@ -484,7 +484,7 @@ if (-not $quickCheck) {
 # STEP 5: DISK HEALTH CHECKS
 # ============================================================================
 Write-Status "Checking Disk Health..." "Task"
-$wmicResult = wmic diskdrive get status, model, size /format:list
+$wmicResult = wmic diskdrive get status,model,size /format:list
 $results.WMICDisk = $wmicResult
 
 try {
@@ -1018,27 +1018,22 @@ Write-Status "Report saved to: $htmlReport" "Success"
 # ============================================================================
 # STEP 10: MEMORY DIAGNOSTIC HANDLING
 # ============================================================================
-Write-Status "Memory Diagnostic" "Task"
+# Only run memory diagnostic for Standard Repair, Full Repair, or explicit Memory Test
+# Skip for Quick Health Check (menuChoice=1), Cleanup Only (menuChoice=5), View Report (menuChoice=6)
+if ($menuChoice -in @('2', '3', '4') -or $AutoMemoryTest) {
+    Write-Status "Memory Diagnostic" "Task"
 
-if ($AutoMemoryTest) {
-    Write-Status "Scheduling memory test and rebooting in 30 seconds..." "Warning"
-    Write-Host "Press CTRL+C to abort!" -ForegroundColor Red
-    Start-Sleep -Seconds 30
-    & $env:SystemRoot\System32\mdsched.exe /s
-    Restart-Computer -Force
-} else {
-    Write-Status "Launching Windows Memory Diagnostic tool..." "Info"
-    Write-Host "Please select 'Restart now and check for problems' when prompted." -ForegroundColor Yellow
-    Write-Host "Report has been saved to: $htmlReport" -ForegroundColor Cyan
-    Start-Process mdsched.exe
-    
-    $shortcutPath = "$env:USERPROFILE\Desktop\Windows Fixer - Memory Test.lnk"
-    if (!(Test-Path $shortcutPath)) {
-        $WScriptShell = New-Object -ComObject WScript.Shell
-        $shortcut = $WScriptShell.CreateShortcut($shortcutPath)
-        $shortcut.TargetPath = "$env:SystemRoot\System32\mdsched.exe"
-        $shortcut.Save()
-        Write-Status "Created desktop shortcut: 'Windows Fixer - Memory Test'" "Success"
+    if ($AutoMemoryTest) {
+        Write-Status "Scheduling memory test and rebooting in 30 seconds..." "Warning"
+        Write-Host "Press CTRL+C to abort!" -ForegroundColor Red
+        Start-Sleep -Seconds 30
+        & $env:SystemRoot\System32\mdsched.exe /s
+        Restart-Computer -Force
+    } else {
+        Write-Status "Launching Windows Memory Diagnostic tool..." "Info"
+        Write-Host "Please select 'Restart now and check for problems' when prompted." -ForegroundColor Yellow
+        Write-Host "Report has been saved to: $htmlReport" -ForegroundColor Cyan
+        Start-Process mdsched.exe
     }
 }
 
