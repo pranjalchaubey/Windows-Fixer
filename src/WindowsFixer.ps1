@@ -92,7 +92,7 @@ function Test-IsAdmin {
 }
 
 if (!(Test-IsAdmin)) {
-    Write-Host "⚠️  Administrator rights required. Restarting elevated..." -ForegroundColor Yellow
+    Write-Host "[!] Administrator rights required. Restarting elevated..." -ForegroundColor Yellow
     $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
     if ($AutoMemoryTest) { $arguments += " -AutoMemoryTest" }
     if ($IncludeRegistryFixes) { $arguments += " -IncludeRegistryFixes" }
@@ -175,55 +175,48 @@ function Show-MainMenu {
     Write-Host "==============================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Current System Status:" -ForegroundColor Yellow
-    Write-Host "├─ OS: " -ForegroundColor Gray -NoNewline
+    Write-Host " │ OS        : " -ForegroundColor Gray -NoNewline
     Write-Host "$($SystemInfo.OS) (Build $($SystemInfo.Build))" -ForegroundColor White
-    Write-Host "├─ Processor: " -ForegroundColor Gray -NoNewline
+    Write-Host " │ Processor : " -ForegroundColor Gray -NoNewline
     Write-Host $SystemInfo.Processor -ForegroundColor White
-    Write-Host "├─ RAM: " -ForegroundColor Gray -NoNewline
+    Write-Host " │ RAM       : " -ForegroundColor Gray -NoNewline
     Write-Host $SystemInfo.RAM -ForegroundColor White
-    Write-Host "├─ GPU: " -ForegroundColor Gray -NoNewline
+    Write-Host " │ GPU       : " -ForegroundColor Gray -NoNewline
     Write-Host $SystemInfo.GPU -ForegroundColor White
-    Write-Host "├─ Free Space: " -ForegroundColor Gray -NoNewline
+    Write-Host " │ Free Space: " -ForegroundColor Gray -NoNewline
     Write-Host $SystemInfo.FreeSpace -ForegroundColor White
-    Write-Host "├─ Uptime: " -ForegroundColor Gray -NoNewline
+    Write-Host " │ Uptime    : " -ForegroundColor Gray -NoNewline
     Write-Host $SystemInfo.Uptime -ForegroundColor White
-    Write-Host "└─ Last Scan: " -ForegroundColor Gray -NoNewline
+    Write-Host " │ Last Scan : " -ForegroundColor Gray -NoNewline
     Write-Host $SystemInfo.LastScan -ForegroundColor White
     Write-Host ""
-    Write-Host "┌──────────────────────────────────────────┐" -ForegroundColor DarkCyan
-    Write-Host "│  REPAIR OPTIONS                          │" -ForegroundColor DarkCyan
-    Write-Host "└──────────────────────────────────────────┘" -ForegroundColor DarkCyan
+    Write-Host "╔══════════════════════════════════════════╗" -ForegroundColor DarkCyan
+    Write-Host "║  REPAIR OPTIONS                          ║" -ForegroundColor DarkCyan
+    Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor DarkCyan
     Write-Host ""
-    Write-Host "  1  " -ForegroundColor White -NoNewline
-    Write-Host "🔍 Quick Health Check " -ForegroundColor Cyan -NoNewline
+    Write-Host "  [1] Quick Health Check " -ForegroundColor Cyan -NoNewline
     Write-Host "(5 min)" -ForegroundColor DarkGray
-    Write-Host "     └─ Read-only scan, no changes made" -ForegroundColor Gray
+    Write-Host "      > Read-only scan, no changes made" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  2  " -ForegroundColor White -NoNewline
-    Write-Host "🛠️  Standard Repair " -ForegroundColor Green -NoNewline
+    Write-Host "  [2] Standard Repair " -ForegroundColor Green -NoNewline
     Write-Host "(30-45 min)" -ForegroundColor DarkGray
-    Write-Host "     └─ SFC + DISM + Cleanup [SAFE]" -ForegroundColor Gray
+    Write-Host "      > SFC + DISM + Cleanup [SAFE]" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  3  " -ForegroundColor White -NoNewline
-    Write-Host "🔧 Full Repair " -ForegroundColor Yellow -NoNewline
+    Write-Host "  [3] Full Repair " -ForegroundColor Yellow -NoNewline
     Write-Host "(45-60 min)" -ForegroundColor DarkGray
-    Write-Host "     └─ Standard + Registry Fixes [BACKUP CREATED]" -ForegroundColor Gray
+    Write-Host "      > Standard + Registry Fixes [BACKUP CREATED]" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "┌──────────────────────────────────────────┐" -ForegroundColor DarkCyan
-    Write-Host "│  UTILITIES                               │" -ForegroundColor DarkCyan
-    Write-Host "└──────────────────────────────────────────┘" -ForegroundColor DarkCyan
+    Write-Host "╔══════════════════════════════════════════╗" -ForegroundColor DarkCyan
+    Write-Host "║  UTILITIES                               ║" -ForegroundColor DarkCyan
+    Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor DarkCyan
     Write-Host ""
-    Write-Host "  4  " -ForegroundColor White -NoNewline
-    Write-Host "💾 Memory Test " -ForegroundColor Magenta -NoNewline
+    Write-Host "  [4] Memory Test " -ForegroundColor Magenta -NoNewline
     Write-Host "(Requires Reboot)" -ForegroundColor DarkGray
-    Write-Host "  5  " -ForegroundColor White -NoNewline
-    Write-Host "🗑️  Cleanup Only " -ForegroundColor DarkYellow -NoNewline
+    Write-Host "  [5] Cleanup Only " -ForegroundColor DarkYellow -NoNewline
     Write-Host "(2-5 min)" -ForegroundColor DarkGray
-    Write-Host "  6  " -ForegroundColor White -NoNewline
-    Write-Host "📊 View Last Report" -ForegroundColor Blue
+    Write-Host "  [6] View Last Report" -ForegroundColor Green
     Write-Host ""
-    Write-Host "  7  " -ForegroundColor White -NoNewline
-    Write-Host "❌ Exit" -ForegroundColor Red
+    Write-Host "  [7] Exit" -ForegroundColor Red
     Write-Host ""
     Write-Host "Enter your choice (1-7): " -ForegroundColor Cyan -NoNewline
     
@@ -233,20 +226,16 @@ function Show-MainMenu {
 
 function Show-PostExecutionMenu {
     Write-Host ""
-    Write-Host "┌──────────────────────────────────────────┐" -ForegroundColor Green
-    Write-Host "│  OPERATION COMPLETED!                    │" -ForegroundColor Green
-    Write-Host "└──────────────────────────────────────────┘" -ForegroundColor Green
+    Write-Host "╔══════════════════════════════════════════╗" -ForegroundColor Green
+    Write-Host "║  OPERATION COMPLETED!                    ║" -ForegroundColor Green
+    Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor Green
     Write-Host ""
     Write-Host "What would you like to do next?" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "  1  " -ForegroundColor White -NoNewline
-    Write-Host "📊 View HTML Report" -ForegroundColor Cyan
-    Write-Host "  2  " -ForegroundColor White -NoNewline
-    Write-Host "🔄 Reboot Now (Recommended)" -ForegroundColor Yellow
-    Write-Host "  3  " -ForegroundColor White -NoNewline
-    Write-Host "↩️  Return to Main Menu" -ForegroundColor Green
-    Write-Host "  4  " -ForegroundColor White -NoNewline
-    Write-Host "❌ Exit" -ForegroundColor Red
+    Write-Host "  [1] View HTML Report" -ForegroundColor Cyan
+    Write-Host "  [2] Reboot Now (Recommended)" -ForegroundColor Yellow
+    Write-Host "  [3] Return to Main Menu" -ForegroundColor Green
+    Write-Host "  [4] Exit" -ForegroundColor Red
     Write-Host ""
     Write-Host "Enter your choice (1-4): " -ForegroundColor Cyan -NoNewline
     
@@ -283,21 +272,21 @@ if ($SkipMenu -or $AutoMemoryTest -or $IncludeRegistryFixes) {
         switch ($menuChoice) {
             '1' {
                 # Quick Health Check
-                Write-Host "`n🔍 Starting Quick Health Check..." -ForegroundColor Cyan
+                Write-Host "`n[*] Starting Quick Health Check..." -ForegroundColor Cyan
                 $quickCheck = $true
                 $IncludeRegistryFixes = $false
                 break
             }
             '2' {
                 # Standard Repair
-                Write-Host "`n🛠️  Starting Standard Repair..." -ForegroundColor Green
+                Write-Host "`n[+] Starting Standard Repair..." -ForegroundColor Green
                 $quickCheck = $false
                 $IncludeRegistryFixes = $false
                 break
             }
             '3' {
                 # Full Repair
-                Write-Host "`n🔧 Starting Full Repair..." -ForegroundColor Yellow
+                Write-Host "`n[!] Starting Full Repair..." -ForegroundColor Yellow
                 Write-Host "WARNING: This will create a restore point and modify registry." -ForegroundColor Yellow
                 Write-Host ""
                 Write-Host "Do you want to proceed? (Y/N): " -ForegroundColor Cyan -NoNewline
@@ -313,10 +302,10 @@ if ($SkipMenu -or $AutoMemoryTest -or $IncludeRegistryFixes) {
             }
             '4' {
                 # Memory Test
-                Write-Host "`n💾 Launching Memory Diagnostic..." -ForegroundColor Magenta
+                Write-Host "`n[M] Launching Memory Diagnostic..." -ForegroundColor Magenta
                 Write-Host ""
                 Start-Process mdsched.exe
-                Write-Host "✅ Memory Diagnostic tool launched." -ForegroundColor Green
+                Write-Host "[+] Memory Diagnostic tool launched." -ForegroundColor Green
                 Write-Host "Please restart your computer to run the test." -ForegroundColor Yellow
                 Write-Host "You can use the post-execution menu to reboot after viewing the report." -ForegroundColor Cyan
                 Write-Host ""
@@ -326,7 +315,7 @@ if ($SkipMenu -or $AutoMemoryTest -or $IncludeRegistryFixes) {
             }
             '5' {
                 # Cleanup Only
-                Write-Host "`n🗑️  Starting Cleanup..." -ForegroundColor DarkYellow
+                Write-Host "`n[C] Starting Cleanup..." -ForegroundColor DarkYellow
                 
                 Write-Status "Cleaning temporary files..." "Task"
                 $tempPaths = @("$env:TEMP\*", "$env:SystemRoot\Temp\*", "$env:SystemRoot\Logs\CBS\*")
@@ -349,7 +338,7 @@ if ($SkipMenu -or $AutoMemoryTest -or $IncludeRegistryFixes) {
                 Write-Status "Component cleanup completed" "Success"
                 
                 Write-Host ""
-                Write-Host "✅ Cleanup completed successfully!" -ForegroundColor Green
+                Write-Host "[+] Cleanup completed successfully!" -ForegroundColor Green
                 Write-Host ""
                 Write-Host "Press any key to return to menu..." -ForegroundColor Gray
                 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -357,15 +346,15 @@ if ($SkipMenu -or $AutoMemoryTest -or $IncludeRegistryFixes) {
             }
             '6' {
                 # View Last Report
-                Write-Host "`n📊 Opening last report..." -ForegroundColor Blue
+                Write-Host "`n[R] Opening last report..." -ForegroundColor Cyan
                 $lastReport = Get-ChildItem -Path $logDir -Filter "WindowsFixer_Report_*.html" -ErrorAction SilentlyContinue | 
                     Sort-Object LastWriteTime -Descending | Select-Object -First 1
                 
                 if ($lastReport) {
                     Start-Process $lastReport.FullName
-                    Write-Host "✅ Report opened in your browser." -ForegroundColor Green
+                    Write-Host "[+] Report opened in your browser." -ForegroundColor Green
                 } else {
-                    Write-Host "❌ No previous reports found." -ForegroundColor Red
+                    Write-Host "[X] No previous reports found." -ForegroundColor Red
                 }
                 Write-Host ""
                 Write-Host "Press any key to return to menu..." -ForegroundColor Gray
@@ -374,12 +363,12 @@ if ($SkipMenu -or $AutoMemoryTest -or $IncludeRegistryFixes) {
             }
             '7' {
                 # Exit
-                Write-Host "`nGoodbye! 👋" -ForegroundColor Cyan
+                Write-Host "`nGoodbye!" -ForegroundColor Cyan
                 $exitScript = $true
                 exit
             }
             default {
-                Write-Host "`n❌ Invalid choice. Please enter 1-7." -ForegroundColor Red
+                Write-Host "`n[X] Invalid choice. Please enter 1-7." -ForegroundColor Red
                 Start-Sleep -Seconds 2
                 continue
             }
@@ -1036,29 +1025,30 @@ if (-not $SkipMenu -and -not $AutoMemoryTest) {
             '1' {
                 # View Report
                 Start-Process $htmlReport
-                Write-Host "`n✅ Report opened in your browser." -ForegroundColor Green
+                Write-Host "`n[+] Report opened in your browser." -ForegroundColor Green
                 Start-Sleep -Seconds 2
             }
             '2' {
                 # Reboot Now
-                Write-Host "`n🔄 Rebooting in 10 seconds..." -ForegroundColor Yellow
+                Write-Host "`n[*] Rebooting in 10 seconds..." -ForegroundColor Yellow
                 Write-Host "Press CTRL+C to abort!" -ForegroundColor Red
                 Start-Sleep -Seconds 10
                 Stop-Computer -Force
             }
             '3' {
                 # Return to Main Menu
-                Write-Host "`n↩️  Restarting script..." -ForegroundColor Blue
+                Write-Host "`n[<] Restarting script..." -ForegroundColor Cyan
                 Start-Sleep -Seconds 1
                 & $PSCommandPath
                 exit
             }
             '4' {
                 # Exit
-                Write-Host "`nGoodbye! 👋" -ForegroundColor Cyan
+                Write-Host "`nGoodbye!" -ForegroundColor Cyan
                 exit
             }
             default {
+                Write-Host "`n[X] Invalid choice. Please enter 1-4." -ForegroundColor Red
                 Write-Host "`n❌ Invalid choice. Please enter 1-4." -ForegroundColor Red
                 Start-Sleep -Seconds 2
             }
