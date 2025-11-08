@@ -244,7 +244,7 @@ function Show-PostExecutionMenu {
     Write-Host "  2  " -ForegroundColor White -NoNewline
     Write-Host "🔄 Reboot Now (Recommended)" -ForegroundColor Yellow
     Write-Host "  3  " -ForegroundColor White -NoNewline
-    Write-Host "↩️  Return to Main Menu" -ForegroundColor Blue
+    Write-Host "↩️  Return to Main Menu" -ForegroundColor Green
     Write-Host "  4  " -ForegroundColor White -NoNewline
     Write-Host "❌ Exit" -ForegroundColor Red
     Write-Host ""
@@ -315,28 +315,14 @@ if ($SkipMenu -or $AutoMemoryTest -or $IncludeRegistryFixes) {
                 # Memory Test
                 Write-Host "`n💾 Launching Memory Diagnostic..." -ForegroundColor Magenta
                 Write-Host ""
-                Write-Host "Choose memory test option:" -ForegroundColor Yellow
-                Write-Host "  1. Launch tool (manual restart)" -ForegroundColor Gray
-                Write-Host "  2. Auto-reboot in 30 seconds" -ForegroundColor Gray
+                Start-Process mdsched.exe
+                Write-Host "✅ Memory Diagnostic tool launched." -ForegroundColor Green
+                Write-Host "Please restart your computer to run the test." -ForegroundColor Yellow
+                Write-Host "You can use the post-execution menu to reboot after viewing the report." -ForegroundColor Cyan
                 Write-Host ""
-                Write-Host "Enter choice (1-2): " -ForegroundColor Cyan -NoNewline
-                $memChoice = Read-Host
-                
-                if ($memChoice -eq '2') {
-                    $AutoMemoryTest = $true
-                    mdsched.exe
-                    Write-Host ""
-                    Write-Host "Memory test scheduled. Rebooting in 30 seconds..." -ForegroundColor Yellow
-                    Write-Host "Press CTRL+C to abort!" -ForegroundColor Red
-                    Start-Sleep -Seconds 30
-                    shutdown /r /t 0
-                    exit
-                } else {
-                    mdsched.exe
-                    Write-Host "Memory Diagnostic tool launched. Please restart manually to run the test." -ForegroundColor Green
-                    Start-Sleep -Seconds 3
-                    continue
-                }
+                Write-Host "Press any key to return to menu..." -ForegroundColor Gray
+                $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+                continue
             }
             '5' {
                 # Cleanup Only
@@ -1024,11 +1010,10 @@ if ($menuChoice -in @('2', '3', '4') -or $AutoMemoryTest) {
     Write-Status "Memory Diagnostic" "Task"
 
     if ($AutoMemoryTest) {
-        Write-Status "Scheduling memory test and rebooting in 30 seconds..." "Warning"
+        Write-Status "Scheduling memory test in 30 seconds..." "Warning"
         Write-Host "Press CTRL+C to abort!" -ForegroundColor Red
         Start-Sleep -Seconds 30
         & $env:SystemRoot\System32\mdsched.exe /s
-        Restart-Computer -Force
     } else {
         Write-Status "Launching Windows Memory Diagnostic tool..." "Info"
         Write-Host "Please select 'Restart now and check for problems' when prompted." -ForegroundColor Yellow
