@@ -320,7 +320,7 @@ if ($SkipMenu -or $AutoMemoryTest -or $IncludeRegistryFixes) {
                 Write-Status "Cleaning temporary files..." "Task"
                 $tempPaths = @("$env:TEMP\*", "$env:SystemRoot\Temp\*", "$env:SystemRoot\Logs\CBS\*")
                 $beforeSize = 0
-                $afterSize = 0
+                # $afterSize = 0
                 
                 foreach ($path in $tempPaths) {
                     try {
