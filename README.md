@@ -424,12 +424,13 @@ This project is licensed under the MIT License. See LICENSE file for details.
 ```
 Windows-Fixer/
 ├── src/
-│   └── WindowsFixer.ps1      # Main script
-├── README.md                 # This file
-├── LICENSE                   # MIT License
+│   └── WindowsFixer.ps1                     # Main script
+├── README.md                                # This file
+├── LICENSE                                  # MIT License
 └── assets/
-    └── app-screenshot.png    # Screenshots
-    └── sample-report.html    # Sample HTML Report
+    └── app-screenshot.png                   # Screenshots
+    └── sample-report-full-screenshot.png    # Full Size Sample Report Screenshot
+    └── sample-report.html                   # Sample HTML Report
 ```
 
 ---
